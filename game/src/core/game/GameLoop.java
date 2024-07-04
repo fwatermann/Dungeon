@@ -6,7 +6,12 @@ import core.System;
 import core.components.PositionComponent;
 import core.level.generator.postGeneration.WallGenerator;
 import core.level.generator.randomwalk.RandomWalkGenerator;
-import core.systems.*;
+import core.systems.CameraSystem;
+import core.systems.DrawSystem;
+import core.systems.LevelSystem;
+import core.systems.PlayerSystem;
+import core.systems.PositionSystem;
+import core.systems.VelocitySystem;
 import core.utils.IVoidFunction;
 import core.utils.components.MissingComponentException;
 import de.fwatermann.dungine.event.EventHandler;
@@ -35,7 +40,7 @@ import org.lwjgl.glfw.GLFW;
  */
 public final class GameLoop extends GameState implements EventListener {
 
-  private static final Logger LOGGER = LogManager.getLogger();
+  private static final Logger LOGGER = LogManager.getLogger(GameLoop.class);
   private boolean newLevelWasLoadedInThisLoop = false;
 
   /**
@@ -51,7 +56,7 @@ public final class GameLoop extends GameState implements EventListener {
    */
   private final IVoidFunction onLevelLoad =
       () -> {
-        newLevelWasLoadedInThisLoop = true;
+        this.newLevelWasLoadedInThisLoop = true;
         Optional<Entity> hero = ECSManagment.hero();
         boolean firstLoad = !ECSManagment.levelStorageMap().containsKey(Game.currentLevel());
         hero.ifPresent(ECSManagment::remove);
@@ -87,12 +92,13 @@ public final class GameLoop extends GameState implements EventListener {
    *
    * <p>Triggers the execution of the systems and the event callbacks.
    *
-   * <p>Will trigger {@link #frame} and {@link PreRunConfiguration#userOnFrame()}.
+   * <p>Will trigger {@link PreRunConfiguration#userOnFrame()}.
    *
    * @param deltaTime The time since the last loop.
    */
   @Override
   public void render(float deltaTime) {
+    LOGGER.trace("GameLoop.render({})", deltaTime);
     DrawSystem.batch().setProjectionMatrix(CameraSystem.camera().combined);
     PreRunConfiguration.userOnFrame().execute();
   }
@@ -120,17 +126,19 @@ public final class GameLoop extends GameState implements EventListener {
   public void init() {
 
     LoadStepper stepper = new LoadStepper(this.window);
-    stepper.step("createSystems", (results) -> {
-      this.createSystems();
-      return null;
-    });
+    stepper.step(
+        "createSystems",
+        (results) -> {
+          this.createSystems();
+          return null;
+        });
 
     PreRunConfiguration.userOnSetup().execute();
   }
 
   @Override
   public boolean loaded() {
-    return false;
+    return true;
   }
 
   @EventHandler
@@ -167,14 +175,12 @@ public final class GameLoop extends GameState implements EventListener {
     ECSManagment.add(new CameraSystem());
     ECSManagment.add(
         new LevelSystem(
-            DrawSystem.painter(), new WallGenerator(new RandomWalkGenerator()), onLevelLoad));
+            DrawSystem.painter(), new WallGenerator(new RandomWalkGenerator()), this.onLevelLoad));
     ECSManagment.add(new DrawSystem());
     ECSManagment.add(new VelocitySystem());
     ECSManagment.add(new PlayerSystem());
   }
 
   @Override
-  public void dispose() {
-
-  }
+  public void dispose() {}
 }
