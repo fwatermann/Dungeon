@@ -1,8 +1,6 @@
 package core;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ai.pfa.GraphPath;
-import com.badlogic.gdx.scenes.scene2d.Stage;
 import core.components.PositionComponent;
 import core.game.ECSManagment;
 import core.game.GameLoop;
@@ -17,21 +15,21 @@ import core.utils.IVoidFunction;
 import core.utils.Point;
 import core.utils.components.MissingComponentException;
 import core.utils.components.path.IPath;
+import de.fwatermann.dungine.window.GameWindow;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Stream;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.joml.Vector2i;
 
 /**
  * The Center-Point of the framework.
  *
  * <p>This class is basically an API-Class, it will forward the request to the responsible classes.
- *
- * <p>Use {@link #run()} to start the game.
  *
  * <p>For Entity management use: {@link #add(Entity)}, {@link #remove(Entity)} or {@link
  * #removeAllEntities()}
@@ -49,152 +47,30 @@ import java.util.stream.Stream;
  * @see ECSManagment
  * @see GameLoop
  */
-public final class Game {
+public final class Game extends GameWindow {
 
-  private static final Logger LOGGER = Logger.getLogger(Game.class.getSimpleName());
+  private static final Logger LOGGER = LogManager.getLogger(Game.class);
 
-  /** Starts the dungeon and requires a {@link Game}. */
-  public static void run() {
-    GameLoop.run();
+  private GameLoop gameLoop;
+
+  /** Constructs a new Game. */
+  public Game() {
+    super(
+        "Dungeon",
+        new Vector2i(PreRunConfiguration.windowWidth(), PreRunConfiguration.windowHeight()),
+        true,
+        false);
   }
 
-  /**
-   * Retrieves the window width from Gdx.
-   *
-   * @return The window width.
-   */
-  public static int windowWidth() {
-    return Gdx.graphics.getWidth();
+  @Override
+  public void init() {
+    this.gameLoop = new GameLoop(this);
+    this.setState(this.gameLoop);
   }
 
-  /**
-   * Sets the window width in the pre-run configuration.
-   *
-   * @param windowWidth The new window width.
-   */
-  public static void windowWidth(int windowWidth) {
-    PreRunConfiguration.windowWidth(windowWidth);
-  }
-
-  /**
-   * Retrieves the window height from Gdx.
-   *
-   * @return The window height.
-   */
-  public static int windowHeight() {
-    return Gdx.graphics.getHeight();
-  }
-
-  /**
-   * Sets the window height in the pre-run configuration.
-   *
-   * @param windowHeight The new window height.
-   */
-  public static void windowHeight(int windowHeight) {
-    PreRunConfiguration.windowHeight(windowHeight);
-  }
-
-  /**
-   * Retrieves the frame rate from the pre-run configuration.
-   *
-   * @return The frame rate.
-   */
-  public static int frameRate() {
-    return PreRunConfiguration.frameRate();
-  }
-
-  /**
-   * Sets the frame rate in the pre-run configuration.
-   *
-   * @param frameRate The new frame rate.
-   */
-  public static void frameRate(int frameRate) {
-    PreRunConfiguration.frameRate(frameRate);
-  }
-
-  /**
-   * Sets the window title in the pre-run configuration.
-   *
-   * @param windowTitle The new window title.
-   */
-  public static void windowTitle(final String windowTitle) {
-    PreRunConfiguration.windowTitle(windowTitle);
-  }
-
-  /**
-   * Gets the path to the game logo.
-   *
-   * @return The path to the game logo.
-   */
-  public static IPath logoPath() {
-    return PreRunConfiguration.logoPath();
-  }
-
-  /**
-   * Sets the path to the game logo.
-   *
-   * @param logoPath The path to the game logo.
-   */
-  public static void logoPath(IPath logoPath) {
-    PreRunConfiguration.logoPath(logoPath);
-  }
-
-  /**
-   * Sets the audio disable setting in the pre-run configuration.
-   *
-   * @param disableAudio True to disable audio, false otherwise.
-   */
-  public static void disableAudio(boolean disableAudio) {
-    PreRunConfiguration.disableAudio(disableAudio);
-  }
-
-  /**
-   * Sets the user-defined function for frame updates in the pre-run configuration.
-   *
-   * @param userOnFrame The new user-defined function for frame updates.
-   */
-  public static void userOnFrame(final IVoidFunction userOnFrame) {
-    PreRunConfiguration.userOnFrame(userOnFrame);
-  }
-
-  /**
-   * Sets the user-defined function for setup in the pre-run configuration.
-   *
-   * @param userOnSetup The new user-defined function for setup.
-   */
-  public static void userOnSetup(final IVoidFunction userOnSetup) {
-    PreRunConfiguration.userOnSetup(userOnSetup);
-  }
-
-  /**
-   * Sets the user-defined function for level load in the pre-run configuration.
-   *
-   * @param userOnLevelLoad The new user-defined function for level load.
-   */
-  public static void userOnLevelLoad(final Consumer<Boolean> userOnLevelLoad) {
-    PreRunConfiguration.userOnLevelLoad(userOnLevelLoad);
-  }
-
-  /**
-   * Initialize the base logger.
-   *
-   * <p>Set a logging level, and remove the console handler, and write all log messages into the log
-   * files.
-   *
-   * @param level Set logging level to {@code level}
-   */
-  public static void initBaseLogger(Level level) {
-    PreRunConfiguration.initBaseLogger(level);
-  }
-
-  /**
-   * Initialize the base logger.
-   *
-   * <p>Set the logging level to {@code Level.ALL}, and remove the console handler, and write all
-   * log messages into the log files. This is a concenience method.
-   */
-  public static void initBaseLogger() {
-    Game.initBaseLogger(Level.ALL);
+  @Override
+  public void cleanup() {
+    this.gameLoop.dispose();
   }
 
   /**
@@ -208,15 +84,6 @@ public final class Game {
   public static void loadConfig(final IPath path, final Class<?>... keyboardConfigClass)
       throws IOException {
     PreRunConfiguration.loadConfig(path, keyboardConfigClass);
-  }
-
-  /**
-   * Retrieves the optional stage from the game loop.
-   *
-   * @return The optional stage.
-   */
-  public static Optional<Stage> stage() {
-    return GameLoop.stage();
   }
 
   /**
@@ -512,7 +379,7 @@ public final class Game {
   public static void currentLevel(final ILevel level) {
     LevelSystem levelSystem = (LevelSystem) ECSManagment.systems().get(LevelSystem.class);
     if (levelSystem != null) levelSystem.loadLevel(level);
-    else LOGGER.warning("Can not set Level because levelSystem is null.");
+    else LOGGER.warn("Can not set Level because levelSystem is null.");
   }
 
   /**
@@ -535,10 +402,5 @@ public final class Game {
    */
   public static void levelSize(final LevelSize levelSize) {
     LevelSystem.levelSize(levelSize);
-  }
-
-  /** Exits the GDX application. */
-  public static void exit() {
-    Gdx.app.exit();
   }
 }
