@@ -9,10 +9,20 @@ import core.level.generator.randomwalk.RandomWalkGenerator;
 import core.systems.*;
 import core.utils.IVoidFunction;
 import core.utils.components.MissingComponentException;
+import de.fwatermann.dungine.event.EventHandler;
+import de.fwatermann.dungine.event.EventListener;
+import de.fwatermann.dungine.event.EventManager;
+import de.fwatermann.dungine.event.input.KeyboardEvent;
+import de.fwatermann.dungine.event.window.WindowResizeEvent;
+import de.fwatermann.dungine.state.GameState;
+import de.fwatermann.dungine.state.LoadStepper;
+import de.fwatermann.dungine.window.GameWindow;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * The Dungeon-GameLoop.
@@ -21,14 +31,11 @@ import java.util.logging.Logger;
  * flow, will execute the Systems, and triggers the event callbacks configured in the {@link
  * PreRunConfiguration}.
  *
- * <p>Use {@link #run()} to start the game.
- *
  * <p>All API methods can also be accessed via the {@link core.Game} class.
  */
-public final class GameLoop extends ScreenAdapter {
-  private static final Logger LOGGER = Logger.getLogger(GameLoop.class.getSimpleName());
-  private static Stage stage;
-  private boolean doSetup = true;
+public final class GameLoop extends GameState implements EventListener {
+
+  private static final Logger LOGGER = LogManager.getLogger();
   private boolean newLevelWasLoadedInThisLoop = false;
 
   /**
@@ -62,7 +69,7 @@ public final class GameLoop extends ScreenAdapter {
         try {
           hero.ifPresent(this::placeOnLevelStart);
         } catch (MissingComponentException e) {
-          LOGGER.warning(e.getMessage());
+          LOGGER.warn(e.getMessage());
         }
         hero.ifPresent(ECSManagment::add);
         Game.currentLevel().onLoad();
@@ -70,57 +77,9 @@ public final class GameLoop extends ScreenAdapter {
       };
 
   // for singleton
-  private GameLoop() {}
-
-  /** Starts the dungeon. */
-  public static void run() {
-    Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
-    config.setWindowSizeLimits(
-        PreRunConfiguration.windowWidth(), PreRunConfiguration.windowHeight(), 9999, 9999);
-    config.setForegroundFPS(PreRunConfiguration.frameRate());
-    config.setTitle(PreRunConfiguration.windowTitle());
-    config.setWindowIcon(PreRunConfiguration.logoPath().pathString());
-    config.disableAudio(PreRunConfiguration.disableAudio());
-
-    if (PreRunConfiguration.fullScreen()) {
-      config.setFullscreenMode(Lwjgl3ApplicationConfiguration.getDisplayMode());
-    } else {
-      config.setWindowedMode(PreRunConfiguration.windowWidth(), PreRunConfiguration.windowHeight());
-    }
-
-    new Lwjgl3Application(
-        new com.badlogic.gdx.Game() {
-          @Override
-          public void create() {
-            setScreen(new GameLoop());
-          }
-        },
-        config);
-  }
-
-  /**
-   * Get the {@link Stage} that can be used to draw HUD elements.
-   *
-   * @return The configured stage, can be empty.
-   */
-  public static Optional<Stage> stage() {
-    return Optional.ofNullable(stage);
-  }
-
-  private static void updateStage(final Stage stage) {
-    stage.act(Gdx.graphics.getDeltaTime());
-    stage.draw();
-  }
-
-  private static void setupStage() {
-    stage =
-        new Stage(
-            new ScalingViewport(
-                Scaling.stretch,
-                PreRunConfiguration.windowWidth(),
-                PreRunConfiguration.windowHeight()),
-            new SpriteBatch());
-    Gdx.input.setInputProcessor(stage);
+  public GameLoop(GameWindow window) {
+    super(window);
+    EventManager.getInstance().registerListener(this);
   }
 
   /**
@@ -130,31 +89,26 @@ public final class GameLoop extends ScreenAdapter {
    *
    * <p>Will trigger {@link #frame} and {@link PreRunConfiguration#userOnFrame()}.
    *
-   * <p>On the first frame, {@link #setup()} and {@link PreRunConfiguration#userOnSetup()} are
-   * triggered.
-   *
-   * @param delta The time since the last loop.
+   * @param deltaTime The time since the last loop.
    */
   @Override
-  public void render(float delta) {
-    if (doSetup) setup();
+  public void render(float deltaTime) {
     DrawSystem.batch().setProjectionMatrix(CameraSystem.camera().combined);
-    frame();
-    clearScreen();
+    PreRunConfiguration.userOnFrame().execute();
+  }
 
+  @Override
+  public void update(float deltaTime) {
     for (System system : ECSManagment.systems().values()) {
       // if a new level was loaded, stop this loop-run
-      if (newLevelWasLoadedInThisLoop) break;
+      if (this.newLevelWasLoadedInThisLoop) break;
       system.lastExecuteInFrames(system.lastExecuteInFrames() + 1);
       if (system.isRunning() && system.lastExecuteInFrames() >= system.executeEveryXFrames()) {
         system.execute();
         system.lastExecuteInFrames(0);
       }
     }
-    newLevelWasLoadedInThisLoop = false;
-    CameraSystem.camera().update();
-    // stage logic
-    stage().ifPresent(GameLoop::updateStage);
+    this.newLevelWasLoadedInThisLoop = false;
   }
 
   /**
@@ -162,33 +116,33 @@ public final class GameLoop extends ScreenAdapter {
    *
    * <p>Will perform some setup.
    */
-  private void setup() {
-    doSetup = false;
-    createSystems();
-    setupStage();
+  @Override
+  public void init() {
+
+    LoadStepper stepper = new LoadStepper(this.window);
+    stepper.step("createSystems", (results) -> {
+      this.createSystems();
+      return null;
+    });
+
     PreRunConfiguration.userOnSetup().execute();
   }
 
-  /**
-   * Called at the beginning of each frame, before the entities are updated and the systems are
-   * executed.
-   *
-   * <p>This is the place to add basic logic that isn't part of any system.
-   */
-  private void frame() {
-    fullscreenKey();
-    PreRunConfiguration.userOnFrame().execute();
+  @Override
+  public boolean loaded() {
+    return false;
   }
 
-  private void fullscreenKey() {
-    if (Gdx.input.isKeyJustPressed(core.configuration.KeyboardConfig.TOGGLE_FULLSCREEN.value())) {
-      if (!Gdx.graphics.isFullscreen()) {
-        Gdx.graphics.setFullscreenMode(Gdx.graphics.getDisplayMode());
-      } else {
-        Gdx.graphics.setWindowedMode(
-            PreRunConfiguration.windowWidth(), PreRunConfiguration.windowHeight());
-      }
+  @EventHandler
+  private void onKey(KeyboardEvent event) {
+    if (event.key == GLFW.GLFW_KEY_F11 && event.action == KeyboardEvent.KeyAction.PRESS) {
+      this.window.fullscreen(!this.window.fullscreen());
     }
+  }
+
+  @EventHandler
+  private void onResize(WindowResizeEvent event) {
+    LOGGER.debug("Window Resize: {} -> {}", event.from, event.to);
   }
 
   /**
@@ -207,27 +161,6 @@ public final class GameLoop extends ScreenAdapter {
     pc.position(Game.startTile());
   }
 
-  /**
-   * Clear the screen. Removes all.
-   *
-   * <p>Needs to be called before redraw something.
-   */
-  private void clearScreen() {
-    Gdx.gl.glClearColor(0, 0, 0, 1);
-    Gdx.gl.glClear(GL_COLOR_BUFFER_BIT);
-  }
-
-  @Override
-  public void resize(int width, int height) {
-    super.resize(width, height);
-    stage()
-        .ifPresent(
-            x -> {
-              x.getViewport().setWorldSize(width, height);
-              x.getViewport().update(width, height, true);
-            });
-  }
-
   /** Create the systems. */
   private void createSystems() {
     ECSManagment.add(new PositionSystem());
@@ -238,5 +171,10 @@ public final class GameLoop extends ScreenAdapter {
     ECSManagment.add(new DrawSystem());
     ECSManagment.add(new VelocitySystem());
     ECSManagment.add(new PlayerSystem());
+  }
+
+  @Override
+  public void dispose() {
+
   }
 }
