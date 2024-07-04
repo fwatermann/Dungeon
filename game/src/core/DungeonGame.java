@@ -21,14 +21,6 @@ public class DungeonGame extends GameWindow {
   }
 
   @Override
-  public void render(float deltaTime) {
-  }
-
-  @Override
-  public void update(float deltaTime) {
-  }
-
-  @Override
   public void cleanup() {
   }
 
