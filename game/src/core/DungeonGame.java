@@ -10,7 +10,15 @@ public class DungeonGame extends GameWindow {
 
   private static Logger LOGGER = LogManager.getLogger();
 
-  public DungeonGame() {
+  private static DungeonGame INSTANCE;
+
+  public static DungeonGame getInstance() {
+    if(INSTANCE == null)
+      INSTANCE = new DungeonGame();
+    return INSTANCE;
+  }
+
+  private DungeonGame() {
     super("Dungeon Game", new Vector2i(1280, 720), true, true);
   }
 
