@@ -7,6 +7,7 @@ import core.Game;
 import core.System;
 import core.components.PlayerComponent;
 import core.components.PositionComponent;
+import core.level.Level;
 import core.level.Tile;
 import core.level.elements.ILevel;
 import core.level.elements.tile.DoorTile;
@@ -58,10 +59,7 @@ public final class LevelSystem extends System {
 
   private static final String SOUND_EFFECT = "sounds/enterDoor.wav";
 
-  /** Currently used level-size configuration for generating new level. */
-  private static LevelSize levelSize = LevelSize.MEDIUM;
-
-  private static ILevel currentLevel;
+  private static Level currentLevel;
   private final IVoidFunction onLevelLoad;
   private final Painter painter;
   private final Logger levelAPI_logger = Logger.getLogger(this.getClass().getSimpleName());
@@ -84,7 +82,7 @@ public final class LevelSystem extends System {
     this.generator = generator;
     this.onLevelLoad = onLevelLoad;
     this.painter = painter;
-    this.onEndTile = () -> loadLevel(levelSize);
+    this.onEndTile = () -> this.loadLevel(levelSize);
   }
 
   /**
@@ -92,26 +90,8 @@ public final class LevelSystem extends System {
    *
    * @return The currently loaded level.
    */
-  public static ILevel level() {
+  public static Level level() {
     return currentLevel;
-  }
-
-  /**
-   * Get the configuration size that is set to generate the next level.
-   *
-   * @return Size of the next levels that are generated.
-   */
-  public static LevelSize levelSize() {
-    return levelSize;
-  }
-
-  /**
-   * Set the configuration size that is used to generate the next level.
-   *
-   * @param levelSize The new configuration size for level generation.
-   */
-  public static void levelSize(final LevelSize levelSize) {
-    LevelSystem.levelSize = levelSize;
   }
 
   /**
@@ -121,46 +101,10 @@ public final class LevelSystem extends System {
    *
    * @param level The level to be set.
    */
-  public void loadLevel(final ILevel level) {
+  public void loadLevel(final Level level) {
     currentLevel = level;
-    onLevelLoad.execute();
-    levelAPI_logger.info("A new level was loaded.");
-  }
-
-  /**
-   * Load a new level.
-   *
-   * <p>Will trigger the onLevelLoad callback.
-   *
-   * @param size The wanted size of the new level.
-   * @param label The wanted design of the new level.
-   */
-  public void loadLevel(final LevelSize size, final DesignLabel label) {
-    currentLevel = generator.level(label, size);
-    onLevelLoad.execute();
-    levelAPI_logger.info("A new level was loaded.");
-  }
-
-  /**
-   * Load a new level with the configured size and the given design.
-   *
-   * <p>Will trigger the onLevelLoad callback.
-   *
-   * @param designLabel Wanted level design.
-   */
-  public void loadLevel(final DesignLabel designLabel) {
-    loadLevel(levelSize, designLabel);
-  }
-
-  /**
-   * Load a new level with the given size and a random design. *
-   *
-   * <p>Will trigger the onLevelLoad callback.
-   *
-   * @param size Wanted size of the level.
-   */
-  public void loadLevel(final LevelSize size) {
-    loadLevel(size, DesignLabel.randomDesign());
+    this.onLevelLoad.execute();
+    this.levelAPI_logger.info("A new level was loaded.");
   }
 
   /**
@@ -169,41 +113,13 @@ public final class LevelSystem extends System {
    * <p>Will trigger the onLevelLoad callback.
    */
   public void loadLevel() {
-    loadLevel(levelSize(), DesignLabel.randomDesign());
+    this.loadLevel(levelSize(), DesignLabel.randomDesign());
   }
 
   private void drawLevel() {
     Map<IPath, PainterConfig> mapping = new HashMap<>();
 
-    Tile[][] layout = currentLevel.layout();
-    for (Tile[] tiles : layout) {
-      for (int x = 0; x < layout[0].length; x++) {
-        Tile t = tiles[x];
-        if (t.levelElement() != LevelElement.SKIP && !isTilePitAndOpen(t) && t.visible()) {
-          IPath texturePath = t.texturePath();
-          if (!mapping.containsKey(texturePath)
-              || (mapping.get(texturePath).tintColor() != t.tintColor())) {
-            mapping.put(
-                texturePath, new PainterConfig(texturePath, X_OFFSET, Y_OFFSET, t.tintColor()));
-          }
-          painter.draw(t.position(), texturePath, mapping.get(texturePath));
-        }
-      }
-    }
-  }
-
-  /**
-   * Checks if the provided tile is an instance of PitTile and if it's open.
-   *
-   * @param tile The tile to check.
-   * @return true if the tile is an instance of PitTile, and it's open, false otherwise.
-   */
-  private boolean isTilePitAndOpen(final Tile tile) {
-    if (tile instanceof PitTile) {
-      return ((PitTile) tile).isOpen();
-    } else {
-      return false;
-    }
+    currentLevel.render();
   }
 
   /**
@@ -212,7 +128,7 @@ public final class LevelSystem extends System {
    * @return The currently used level generator.
    */
   public IGenerator generator() {
-    return generator;
+    return this.generator;
   }
 
   /**
@@ -281,21 +197,21 @@ public final class LevelSystem extends System {
   @Override
   public void execute() {
     if (currentLevel == null) {
-      loadLevel(levelSize);
-    } else if (filteredEntityStream(PlayerComponent.class, PositionComponent.class)
-        .anyMatch(this::isOnOpenEndTile)) onEndTile.execute();
+      this.loadLevel();
+    } else if (this.filteredEntityStream(PlayerComponent.class, PositionComponent.class)
+        .anyMatch(this::isOnOpenEndTile)) this.onEndTile.execute();
     else
-      filteredEntityStream()
+      this.filteredEntityStream()
           .forEach(
               e -> {
-                isOnDoor(e)
+                this.isOnDoor(e)
                     .ifPresent(
                         iLevel -> {
                           loadLevel(iLevel);
-                          playSound();
+                          this.playSound();
                         });
               });
-    drawLevel();
+    this.drawLevel();
   }
 
   /**
@@ -313,12 +229,12 @@ public final class LevelSystem extends System {
    * @return The function that is executed when an entity reaches the end tile.
    */
   public IVoidFunction onEndTile() {
-    return onEndTile;
+    return this.onEndTile;
   }
 
   /** LevelSystem can't be paused. If it is paused, the level will not be shown anymore. */
   @Override
   public void stop() {
-    run = true;
+    this.run = true;
   }
 }
