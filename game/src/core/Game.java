@@ -1,19 +1,11 @@
 package core;
 
-import com.badlogic.gdx.ai.pfa.GraphPath;
-import core.components.PositionComponent;
 import core.game.ECSManagment;
 import core.game.GameLoop;
 import core.game.PreRunConfiguration;
-import core.level.Tile;
-import core.level.elements.ILevel;
-import core.level.utils.Coordinate;
-import core.level.utils.LevelElement;
-import core.level.utils.LevelSize;
+import core.level.Level;
 import core.systems.LevelSystem;
 import core.utils.IVoidFunction;
-import core.utils.Point;
-import core.utils.components.MissingComponentException;
 import core.utils.components.path.IPath;
 import de.fwatermann.dungine.window.GameWindow;
 import java.io.IOException;
@@ -233,140 +225,8 @@ public final class Game extends GameWindow {
    *
    * @return the currently loaded level
    */
-  public static ILevel currentLevel() {
+  public static Level currentLevel() {
     return LevelSystem.level();
-  }
-
-  /**
-   * Get the tile at the given point in the level.
-   *
-   * <p>{@link Point#toCoordinate} will be used, to convert the point into a coordinate.
-   *
-   * @param point Point from where to get the tile
-   * @return the tile at the given point.
-   */
-  public static Tile tileAT(final Point point) {
-    return currentLevel().tileAt(point);
-  }
-
-  /**
-   * Get the tile at the given coordinate in the level.
-   *
-   * @param coordinate Coordinate from where to get the tile
-   * @return the tile at the given coordinate.
-   */
-  public static Tile tileAT(final Coordinate coordinate) {
-    return currentLevel().tileAt(coordinate);
-  }
-
-  /**
-   * Get a random tile in the level.
-   *
-   * @return a random Tile in the Level
-   */
-  public static Tile randomTile() {
-    return currentLevel().randomTile();
-  }
-
-  /**
-   * Get the end tile.
-   *
-   * @return The end tile.
-   */
-  public static Tile endTile() {
-    return currentLevel().endTile();
-  }
-
-  /**
-   * Get the start tile.
-   *
-   * @return The start tile.
-   */
-  public static Tile startTile() {
-    return currentLevel().startTile();
-  }
-
-  /**
-   * Returns the tile the given entity is standing on.
-   *
-   * @param entity entity to check for.
-   * @return tile at the coordinate of the entity
-   */
-  public static Tile tileAtEntity(final Entity entity) {
-    return currentLevel().tileAtEntity(entity);
-  }
-
-  /**
-   * Returns the entities on the given tile. If the tile is null, an empty stream will be returned.
-   *
-   * @param check Tile to check for.
-   * @return Stream of all entities on the given tile
-   */
-  public static Stream<Entity> entityAtTile(final Tile check) {
-    Tile tile = Game.tileAT(check.position());
-    if (tile == null) return Stream.empty();
-
-    return ECSManagment.entityStream(Set.of(PositionComponent.class))
-        .filter(
-            e ->
-                tile.equals(
-                    tileAT(
-                        e.fetch(PositionComponent.class)
-                            .orElseThrow(
-                                () -> MissingComponentException.build(e, PositionComponent.class))
-                            .position())));
-  }
-
-  /**
-   * Get a random tile of the given type.
-   *
-   * @param elementType Type of the tile.
-   * @return A random tile of the given type.
-   */
-  public static Tile randomTile(final LevelElement elementType) {
-    return currentLevel().randomTile(elementType);
-  }
-
-  /**
-   * Get the position of a random Tile as Point.
-   *
-   * @return Position of the Tile as Point.
-   */
-  public static Point randomTilePoint() {
-    return currentLevel().randomTilePoint();
-  }
-
-  /**
-   * Get the position of a random Tile as Point.
-   *
-   * @param elementTyp Type of the Tile.
-   * @return Position of the Tile as Point.
-   */
-  public static Point randomTilePoint(final LevelElement elementTyp) {
-    return currentLevel().randomTilePoint(elementTyp);
-  }
-
-  /**
-   * Starts the indexed A* pathfinding algorithm a returns a path
-   *
-   * <p>Throws an IllegalArgumentException if start or end is non-accessible.
-   *
-   * @param start Start tile
-   * @param end End tile
-   * @return Generated path
-   */
-  public static GraphPath<Tile> findPath(final Tile start, final Tile end) {
-    return currentLevel().findPath(start, end);
-  }
-
-  /**
-   * Get the Position of the given entity in the level.
-   *
-   * @param entity Entity to get the current position from (needs a {@link PositionComponent}
-   * @return Position of the given entity.
-   */
-  public static Point positionOf(final Entity entity) {
-    return currentLevel().positionOf(entity);
   }
 
   /**
@@ -376,31 +236,9 @@ public final class Game extends GameWindow {
    *
    * @param level New level
    */
-  public static void currentLevel(final ILevel level) {
+  public static void currentLevel(final Level level) {
     LevelSystem levelSystem = (LevelSystem) ECSManagment.systems().get(LevelSystem.class);
     if (levelSystem != null) levelSystem.loadLevel(level);
     else LOGGER.warn("Can not set Level because levelSystem is null.");
-  }
-
-  /**
-   * The currently set level-Size.
-   *
-   * <p>This value is used for the generation of the next level.
-   *
-   * <p>The currently active level can have a different size.
-   *
-   * @return currently set level-Size.
-   */
-  public static LevelSize levelSize() {
-    return LevelSystem.levelSize();
-  }
-
-  /**
-   * Set the {@link LevelSize} of the next level.
-   *
-   * @param levelSize Size of the next level.
-   */
-  public static void levelSize(final LevelSize levelSize) {
-    LevelSystem.levelSize(levelSize);
   }
 }
