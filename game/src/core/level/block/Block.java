@@ -1,14 +1,16 @@
-package core.level.tile;
+package core.level.block;
 
 import core.level.LevelChunk;
+import de.fwatermann.dungine.resource.Resource;
 import org.joml.Vector3i;
 
-public abstract class Tile {
+public abstract class Block {
 
   private LevelChunk chunk;
   private Vector3i chunkPosition;
+  private Resource currentTexture;
 
-  public Tile(LevelChunk chunk, Vector3i chunkPosition) {
+  public Block(LevelChunk chunk, Vector3i chunkPosition) {
     this.chunkPosition = chunkPosition;
     this.chunk = chunk;
   }
@@ -25,6 +27,10 @@ public abstract class Tile {
 
   public Vector3i chunkPosition() {
     return this.chunkPosition;
+  }
+
+  public Resource currentTexture() {
+    return this.currentTexture;
   }
 
 }

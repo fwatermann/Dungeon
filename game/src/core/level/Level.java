@@ -1,8 +1,9 @@
 package core.level;
 
-import core.level.tile.Tile;
+import core.level.block.Block;
 import core.level.utils.ChunkUtils;
 import de.fwatermann.dungine.graphics.camera.CameraPerspective;
+import de.fwatermann.dungine.graphics.texture.atlas.TextureAtlas;
 import de.fwatermann.dungine.utils.annotations.Null;
 import org.joml.Vector3f;
 import org.joml.Vector3i;
@@ -10,23 +11,28 @@ import org.joml.Vector3i;
 public class Level {
 
   private final LevelChunkTree chunks = new LevelChunkTree();
+  protected TextureAtlas textureAtlas;
 
-  @Null
-  public Tile getTileAt(int x, int y, int z) {
-    LevelChunk chunk = this.getChunkAtPosition(x, y, z);
-    if(chunk == null) return null;
-    return chunk.getTileAt(x, y, z);
+  public Level() {
+    this.textureAtlas = new TextureAtlas();
   }
 
-  public final Tile getTileAt(Vector3i position) {
+  @Null
+  public Block getTileAt(int x, int y, int z) {
+    LevelChunk chunk = this.getChunkAtPosition(x, y, z);
+    if(chunk == null) return null;
+    return chunk.getBlockAt(x, y, z);
+  }
+
+  public final Block getTileAt(Vector3i position) {
     return this.getTileAt(position.x, position.y, position.z);
   }
 
-  public final  Tile getTileAt(float x, float y, float z) {
+  public final Block getTileAt(float x, float y, float z) {
     return this.getTileAt((int) x, (int) y, (int) z);
   }
 
-  public final  Tile getTileAt(Vector3f position) {
+  public final Block getTileAt(Vector3f position) {
     return this.getTileAt(position.x, position.y, position.z);
   }
 
