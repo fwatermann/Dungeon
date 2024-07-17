@@ -1,6 +1,7 @@
 package core.level;
 
 import core.level.block.Block;
+import core.level.generator.IGenerator;
 import core.level.utils.ChunkUtils;
 import de.fwatermann.dungine.graphics.camera.CameraPerspective;
 import de.fwatermann.dungine.graphics.texture.atlas.TextureAtlas;
@@ -12,6 +13,7 @@ public class Level {
 
   private final LevelChunkTree chunks = new LevelChunkTree();
   protected TextureAtlas textureAtlas;
+  protected IGenerator generator;
 
   public Level() {
     this.textureAtlas = new TextureAtlas();
@@ -42,7 +44,12 @@ public class Level {
   }
 
   public final  LevelChunk getChunk(int chunkX, int chunkY, int chunkZ) {
-    return this.chunks.find(chunkX, chunkY, chunkZ);
+    LevelChunk chunk = this.chunks.find(chunkX, chunkY, chunkZ);
+    if(chunk == null) {
+      chunk = this.generator.generateChunk(chunkX, chunkY, chunkZ);
+      this.chunks.insert(chunk);
+    }
+    return chunk;
   }
 
   public void render(CameraPerspective camera) {

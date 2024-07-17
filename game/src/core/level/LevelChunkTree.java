@@ -76,7 +76,9 @@ public class LevelChunkTree implements Iterable<LevelChunk> {
       if (this.chunk != null) {
         if (this.chunk.x() == x && this.chunk.y() == y && this.chunk.z() == z) {
           this.deleted = true;
-          return this.chunk;
+          LevelChunk ret = this.chunk;
+          this.chunk = null;
+          return ret;
         }
       } else {
         return null; // Reached leaf -> Not in tree.
