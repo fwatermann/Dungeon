@@ -29,8 +29,12 @@ public abstract class Block {
     return this.chunkPosition;
   }
 
-  public Resource currentTexture() {
+  public Resource getFaceResource(BlockFace face) {
     return this.currentTexture;
+  }
+
+  public final void update(boolean updateNeighbours) {
+    this.chunk.updateBlockAt(this.chunkPosition.x, this.chunkPosition().y, this.chunkPosition().z, updateNeighbours);
   }
 
 }
